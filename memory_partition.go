@@ -10,7 +10,7 @@ import (
 
 // A memoryPartition implements a partition to store data points on heap.
 // It offers a goroutine safe capabilities.
-type memoryPartition struct {
+type memoryPartition[T any] struct {
 	// The number of data points
 	numPoints int64
 	// minT is immutable.
@@ -21,16 +21,16 @@ type memoryPartition struct {
 	metrics sync.Map
 
 	// Write ahead log.
-	wal wal
+	wal wal[T]
 	// The timestamp range of partitions after which they get persisted
 	partitionDuration  int64
 	timestampPrecision TimestampPrecision
 	once               sync.Once
 }
 
-func newMemoryPartition(wal wal, partitionDuration time.Duration, precision TimestampPrecision) partition {
+func newMemoryPartition[T any](wal wal[T], partitionDuration time.Duration, precision TimestampPrecision) partition[T] {
 	if wal == nil {
-		wal = &nopWAL{}
+		wal = &nopWAL[T]{}
 	}
 	var d int64
 	switch precision {
@@ -45,7 +45,7 @@ func newMemoryPartition(wal wal, partitionDuration time.Duration, precision Time
 	default:
 		d = partitionDuration.Nanoseconds()
 	}
-	return &memoryPartition{
+	return &memoryPartition[T]{
 		partitionDuration:  d,
 		wal:                wal,
 		timestampPrecision: precision,
@@ -53,7 +53,7 @@ func newMemoryPartition(wal wal, partitionDuration time.Duration, precision Time
 }
 
 // insertRows inserts the given rows to partition.
-func (m *memoryPartition) insertRows(rows []Row) ([]Row, error) {
+func (m *memoryPartition[T]) insertRows(rows []Row[T]) ([]Row[T], error) {
 	if len(rows) == 0 {
 		return nil, fmt.Errorf("no rows given")
 	}
@@ -75,7 +75,7 @@ func (m *memoryPartition) insertRows(rows []Row) ([]Row, error) {
 		atomic.StoreInt64(&m.minT, min)
 	})
 
-	outdatedRows := make([]Row, 0)
+	outdatedRows := make([]Row[T], 0)
 	maxTimestamp := rows[0].Timestamp
 	var rowsNum int64
 	for i := range rows {
@@ -120,7 +120,7 @@ func toUnix(t time.Time, precision TimestampPrecision) int64 {
 	}
 }
 
-func (m *memoryPartition) selectDataPoints(metric string, labels []Label, start, end int64) ([]*DataPoint, error) {
+func (m *memoryPartition[T]) selectDataPoints(metric string, labels []Label, start, end int64) ([]*DataPoint[T], error) {
 	name := marshalMetricName(metric, labels)
 	mt := m.getMetric(name)
 	return mt.selectPoints(start, end), nil
@@ -128,58 +128,58 @@ func (m *memoryPartition) selectDataPoints(metric string, labels []Label, start,
 
 // getMetric gives back the reference to the metrics list whose name is the given one.
 // If none, it creates a new one.
-func (m *memoryPartition) getMetric(name string) *memoryMetric {
+func (m *memoryPartition[T]) getMetric(name string) *memoryMetric[T] {
 	value, ok := m.metrics.Load(name)
 	if !ok {
-		value = &memoryMetric{
+		value = &memoryMetric[T]{
 			name:             name,
-			points:           make([]*DataPoint, 0, 1000),
-			outOfOrderPoints: make([]*DataPoint, 0),
+			points:           make([]*DataPoint[T], 0, 1000),
+			outOfOrderPoints: make([]*DataPoint[T], 0),
 		}
 		m.metrics.Store(name, value)
 	}
-	return value.(*memoryMetric)
+	return value.(*memoryMetric[T])
 }
 
-func (m *memoryPartition) minTimestamp() int64 {
+func (m *memoryPartition[T]) minTimestamp() int64 {
 	return atomic.LoadInt64(&m.minT)
 }
 
-func (m *memoryPartition) maxTimestamp() int64 {
+func (m *memoryPartition[T]) maxTimestamp() int64 {
 	return atomic.LoadInt64(&m.maxT)
 }
 
-func (m *memoryPartition) size() int {
+func (m *memoryPartition[T]) size() int {
 	return int(atomic.LoadInt64(&m.numPoints))
 }
 
-func (m *memoryPartition) active() bool {
+func (m *memoryPartition[T]) active() bool {
 	return m.maxTimestamp()-m.minTimestamp()+1 < m.partitionDuration
 }
 
-func (m *memoryPartition) clean() error {
+func (m *memoryPartition[T]) clean() error {
 	// What all data managed by memoryPartition is on heap that is automatically removed by GC.
 	// So do nothing.
 	return nil
 }
 
-func (m *memoryPartition) expired() bool {
+func (m *memoryPartition[T]) expired() bool {
 	return false
 }
 
 // memoryMetric has a list of ordered data points that belong to the memoryMetric
-type memoryMetric struct {
+type memoryMetric[T any] struct {
 	name         string
 	size         int64
 	minTimestamp int64
 	maxTimestamp int64
 	// points must kept in order
-	points           []*DataPoint
-	outOfOrderPoints []*DataPoint
+	points           []*DataPoint[T]
+	outOfOrderPoints []*DataPoint[T]
 	mu               sync.RWMutex
 }
 
-func (m *memoryMetric) insertPoint(point *DataPoint) {
+func (m *memoryMetric[T]) insertPoint(point *DataPoint[T]) {
 	size := atomic.LoadInt64(&m.size)
 	// TODO: Consider to stop using mutex every time.
 	//   Instead, fix the capacity of points slice, kind of like:
@@ -212,14 +212,14 @@ func (m *memoryMetric) insertPoint(point *DataPoint) {
 }
 
 // selectPoints returns a new slice by re-slicing with [startIdx:endIdx].
-func (m *memoryMetric) selectPoints(start, end int64) []*DataPoint {
+func (m *memoryMetric[T]) selectPoints(start, end int64) []*DataPoint[T] {
 	size := atomic.LoadInt64(&m.size)
 	minTimestamp := atomic.LoadInt64(&m.minTimestamp)
 	maxTimestamp := atomic.LoadInt64(&m.maxTimestamp)
 	var startIdx, endIdx int
 
 	if end <= minTimestamp {
-		return []*DataPoint{}
+		return []*DataPoint[T]{}
 	}
 
 	m.mu.RLock()
@@ -246,7 +246,7 @@ func (m *memoryMetric) selectPoints(start, end int64) []*DataPoint {
 
 // encodeAllPoints uses the given seriesEncoder to encode all metric data points in order by timestamp,
 // including outOfOrderPoints.
-func (m *memoryMetric) encodeAllPoints(encoder seriesEncoder) error {
+func (m *memoryMetric[T]) encodeAllPoints(encoder seriesEncoder[T]) error {
 	sort.Slice(m.outOfOrderPoints, func(i, j int) bool {
 		return m.outOfOrderPoints[i].Timestamp < m.outOfOrderPoints[j].Timestamp
 	})

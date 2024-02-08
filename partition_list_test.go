@@ -9,49 +9,49 @@ import (
 func Test_partitionList_Remove(t *testing.T) {
 	tests := []struct {
 		name              string
-		partitionList     partitionListImpl
-		target            partition
+		partitionList     partitionListImpl[float64]
+		target            partition[float64]
 		wantErr           bool
-		wantPartitionList partitionListImpl
+		wantPartitionList partitionListImpl[float64]
 	}{
 		{
 			name:          "empty partition",
-			partitionList: partitionListImpl{},
+			partitionList: partitionListImpl[float64]{},
 			wantErr:       true,
 		},
 		{
 			name: "remove the head node",
-			partitionList: func() partitionListImpl {
-				second := &partitionNode{
-					val: &fakePartition{
+			partitionList: func() partitionListImpl[float64] {
+				second := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 2,
 					},
 				}
 
-				first := &partitionNode{
-					val: &fakePartition{
+				first := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
 					next: second,
 				}
-				return partitionListImpl{
+				return partitionListImpl[float64]{
 					numPartitions: 2,
 					head:          first,
 					tail:          second,
 				}
 			}(),
-			target: &fakePartition{
+			target: &fakePartition[float64]{
 				minT: 1,
 			},
-			wantPartitionList: partitionListImpl{
+			wantPartitionList: partitionListImpl[float64]{
 				numPartitions: 1,
-				head: &partitionNode{
-					val: &fakePartition{
+				head: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 2,
 					},
 				},
-				tail: &partitionNode{
-					val: &fakePartition{
+				tail: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 2,
 					},
 				},
@@ -59,37 +59,37 @@ func Test_partitionList_Remove(t *testing.T) {
 		},
 		{
 			name: "remove the tail node",
-			partitionList: func() partitionListImpl {
-				second := &partitionNode{
-					val: &fakePartition{
+			partitionList: func() partitionListImpl[float64] {
+				second := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 2,
 					},
 				}
 
-				first := &partitionNode{
-					val: &fakePartition{
+				first := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
 					next: second,
 				}
-				return partitionListImpl{
+				return partitionListImpl[float64]{
 					numPartitions: 2,
 					head:          first,
 					tail:          second,
 				}
 			}(),
-			target: &fakePartition{
+			target: &fakePartition[float64]{
 				minT: 2,
 			},
-			wantPartitionList: partitionListImpl{
+			wantPartitionList: partitionListImpl[float64]{
 				numPartitions: 1,
-				head: &partitionNode{
-					val: &fakePartition{
+				head: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
 				},
-				tail: &partitionNode{
-					val: &fakePartition{
+				tail: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
 				},
@@ -97,47 +97,47 @@ func Test_partitionList_Remove(t *testing.T) {
 		},
 		{
 			name: "remove the middle node",
-			partitionList: func() partitionListImpl {
-				third := &partitionNode{
-					val: &fakePartition{
+			partitionList: func() partitionListImpl[float64] {
+				third := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 3,
 					},
 				}
-				second := &partitionNode{
-					val: &fakePartition{
+				second := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 2,
 					},
 					next: third,
 				}
-				first := &partitionNode{
-					val: &fakePartition{
+				first := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
 					next: second,
 				}
-				return partitionListImpl{
+				return partitionListImpl[float64]{
 					numPartitions: 3,
 					head:          first,
 					tail:          third,
 				}
 			}(),
-			target: &fakePartition{
+			target: &fakePartition[float64]{
 				minT: 2,
 			},
-			wantPartitionList: partitionListImpl{
+			wantPartitionList: partitionListImpl[float64]{
 				numPartitions: 2,
-				head: &partitionNode{
-					val: &fakePartition{
+				head: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
-					next: &partitionNode{
-						val: &fakePartition{
+					next: &partitionNode[float64]{
+						val: &fakePartition[float64]{
 							minT: 3,
 						},
 					},
 				},
-				tail: &partitionNode{
-					val: &fakePartition{
+				tail: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 3,
 					},
 				},
@@ -145,42 +145,42 @@ func Test_partitionList_Remove(t *testing.T) {
 		},
 		{
 			name: "given node not found",
-			partitionList: func() partitionListImpl {
-				second := &partitionNode{
-					val: &fakePartition{
+			partitionList: func() partitionListImpl[float64] {
+				second := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 2,
 					},
 				}
 
-				first := &partitionNode{
-					val: &fakePartition{
+				first := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
 					next: second,
 				}
-				return partitionListImpl{
+				return partitionListImpl[float64]{
 					numPartitions: 2,
 					head:          first,
 					tail:          second,
 				}
 			}(),
-			target: &fakePartition{
+			target: &fakePartition[float64]{
 				minT: 3,
 			},
-			wantPartitionList: func() partitionListImpl {
-				second := &partitionNode{
-					val: &fakePartition{
+			wantPartitionList: func() partitionListImpl[float64] {
+				second := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 2,
 					},
 				}
 
-				first := &partitionNode{
-					val: &fakePartition{
+				first := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
 					next: second,
 				}
-				return partitionListImpl{
+				return partitionListImpl[float64]{
 					numPartitions: 2,
 					head:          first,
 					tail:          second,
@@ -201,58 +201,58 @@ func Test_partitionList_Remove(t *testing.T) {
 func Test_partitionList_Swap(t *testing.T) {
 	tests := []struct {
 		name              string
-		partitionList     partitionListImpl
-		old               partition
-		new               partition
+		partitionList     partitionListImpl[float64]
+		old               partition[float64]
+		new               partition[float64]
 		wantErr           bool
-		wantPartitionList partitionListImpl
+		wantPartitionList partitionListImpl[float64]
 	}{
 		{
 			name:          "empty partition",
-			partitionList: partitionListImpl{},
+			partitionList: partitionListImpl[float64]{},
 			wantErr:       true,
 		},
 		{
 			name: "swap the head node",
-			partitionList: func() partitionListImpl {
-				second := &partitionNode{
-					val: &fakePartition{
+			partitionList: func() partitionListImpl[float64] {
+				second := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 2,
 					},
 				}
 
-				first := &partitionNode{
-					val: &fakePartition{
+				first := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
 					next: second,
 				}
-				return partitionListImpl{
+				return partitionListImpl[float64]{
 					numPartitions: 2,
 					head:          first,
 					tail:          second,
 				}
 			}(),
-			old: &fakePartition{
+			old: &fakePartition[float64]{
 				minT: 1,
 			},
-			new: &fakePartition{
+			new: &fakePartition[float64]{
 				minT: 100,
 			},
-			wantPartitionList: partitionListImpl{
+			wantPartitionList: partitionListImpl[float64]{
 				numPartitions: 2,
-				head: &partitionNode{
-					val: &fakePartition{
+				head: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 100,
 					},
-					next: &partitionNode{
-						val: &fakePartition{
+					next: &partitionNode[float64]{
+						val: &fakePartition[float64]{
 							minT: 2,
 						},
 					},
 				},
-				tail: &partitionNode{
-					val: &fakePartition{
+				tail: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 2,
 					},
 				},
@@ -260,45 +260,45 @@ func Test_partitionList_Swap(t *testing.T) {
 		},
 		{
 			name: "swap the tail node",
-			partitionList: func() partitionListImpl {
-				second := &partitionNode{
-					val: &fakePartition{
+			partitionList: func() partitionListImpl[float64] {
+				second := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 2,
 					},
 				}
 
-				first := &partitionNode{
-					val: &fakePartition{
+				first := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
 					next: second,
 				}
-				return partitionListImpl{
+				return partitionListImpl[float64]{
 					numPartitions: 2,
 					head:          first,
 					tail:          second,
 				}
 			}(),
-			old: &fakePartition{
+			old: &fakePartition[float64]{
 				minT: 2,
 			},
-			new: &fakePartition{
+			new: &fakePartition[float64]{
 				minT: 100,
 			},
-			wantPartitionList: partitionListImpl{
+			wantPartitionList: partitionListImpl[float64]{
 				numPartitions: 2,
-				head: &partitionNode{
-					val: &fakePartition{
+				head: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
-					next: &partitionNode{
-						val: &fakePartition{
+					next: &partitionNode[float64]{
+						val: &fakePartition[float64]{
 							minT: 100,
 						},
 					},
 				},
-				tail: &partitionNode{
-					val: &fakePartition{
+				tail: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 100,
 					},
 				},
@@ -306,56 +306,56 @@ func Test_partitionList_Swap(t *testing.T) {
 		},
 		{
 			name: "swap the middle node",
-			partitionList: func() partitionListImpl {
-				third := &partitionNode{
-					val: &fakePartition{
+			partitionList: func() partitionListImpl[float64] {
+				third := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 3,
 					},
 				}
-				second := &partitionNode{
-					val: &fakePartition{
+				second := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 2,
 					},
 					next: third,
 				}
 
-				first := &partitionNode{
-					val: &fakePartition{
+				first := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
 					next: second,
 				}
-				return partitionListImpl{
+				return partitionListImpl[float64]{
 					numPartitions: 3,
 					head:          first,
 					tail:          third,
 				}
 			}(),
-			old: &fakePartition{
+			old: &fakePartition[float64]{
 				minT: 2,
 			},
-			new: &fakePartition{
+			new: &fakePartition[float64]{
 				minT: 100,
 			},
-			wantPartitionList: partitionListImpl{
+			wantPartitionList: partitionListImpl[float64]{
 				numPartitions: 3,
-				head: &partitionNode{
-					val: &fakePartition{
+				head: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
-					next: &partitionNode{
-						val: &fakePartition{
+					next: &partitionNode[float64]{
+						val: &fakePartition[float64]{
 							minT: 100,
 						},
-						next: &partitionNode{
-							val: &fakePartition{
+						next: &partitionNode[float64]{
+							val: &fakePartition[float64]{
 								minT: 3,
 							},
 						},
 					},
 				},
-				tail: &partitionNode{
-					val: &fakePartition{
+				tail: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 3,
 					},
 				},
@@ -363,42 +363,42 @@ func Test_partitionList_Swap(t *testing.T) {
 		},
 		{
 			name: "given node not found",
-			partitionList: func() partitionListImpl {
-				second := &partitionNode{
-					val: &fakePartition{
+			partitionList: func() partitionListImpl[float64] {
+				second := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 2,
 					},
 				}
 
-				first := &partitionNode{
-					val: &fakePartition{
+				first := &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
 					next: second,
 				}
-				return partitionListImpl{
+				return partitionListImpl[float64]{
 					numPartitions: 2,
 					head:          first,
 					tail:          second,
 				}
 			}(),
-			old: &fakePartition{
+			old: &fakePartition[float64]{
 				minT: 100,
 			},
-			wantPartitionList: partitionListImpl{
+			wantPartitionList: partitionListImpl[float64]{
 				numPartitions: 2,
-				head: &partitionNode{
-					val: &fakePartition{
+				head: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 1,
 					},
-					next: &partitionNode{
-						val: &fakePartition{
+					next: &partitionNode[float64]{
+						val: &fakePartition[float64]{
 							minT: 2,
 						},
 					},
 				},
-				tail: &partitionNode{
-					val: &fakePartition{
+				tail: &partitionNode[float64]{
+					val: &fakePartition[float64]{
 						minT: 2,
 					},
 				},

@@ -11,17 +11,17 @@ import (
 func Test_gorillaEncoder_encodePoint_decodePoint(t *testing.T) {
 	tests := []struct {
 		name                string
-		input               []*DataPoint // to be encoded
-		want                []*DataPoint
+		input               []*DataPoint[float64] // to be encoded
+		want                []*DataPoint[float64]
 		wantEncodedByteSize int
 		wantErr             bool
 	}{
 		{
 			name: "one data point",
-			input: []*DataPoint{
+			input: []*DataPoint[float64]{
 				{Timestamp: 1600000000, Value: 0.1},
 			},
-			want: []*DataPoint{
+			want: []*DataPoint[float64]{
 				{Timestamp: 1600000000, Value: 0.1},
 			},
 			wantEncodedByteSize: 14,
@@ -29,13 +29,13 @@ func Test_gorillaEncoder_encodePoint_decodePoint(t *testing.T) {
 		},
 		{
 			name: "data points at regular intervals",
-			input: []*DataPoint{
+			input: []*DataPoint[float64]{
 				{Timestamp: 1600000000, Value: 0.1},
 				{Timestamp: 1600000060, Value: 0.1},
 				{Timestamp: 1600000120, Value: 0.1},
 				{Timestamp: 1600000180, Value: 0.1},
 			},
-			want: []*DataPoint{
+			want: []*DataPoint[float64]{
 				{Timestamp: 1600000000, Value: 0.1},
 				{Timestamp: 1600000060, Value: 0.1},
 				{Timestamp: 1600000120, Value: 0.1},
@@ -46,14 +46,14 @@ func Test_gorillaEncoder_encodePoint_decodePoint(t *testing.T) {
 		},
 		{
 			name: "data points at random intervals",
-			input: []*DataPoint{
+			input: []*DataPoint[float64]{
 				{Timestamp: 1600000000, Value: 0.1},
 				{Timestamp: 1600000060, Value: 1.1},
 				{Timestamp: 1600000182, Value: 15.01},
 				{Timestamp: 1600000400, Value: 0.01},
 				{Timestamp: 1600002000, Value: 10.8},
 			},
-			want: []*DataPoint{
+			want: []*DataPoint[float64]{
 				{Timestamp: 1600000000, Value: 0.1},
 				{Timestamp: 1600000060, Value: 1.1},
 				{Timestamp: 1600000182, Value: 15.01},
@@ -69,7 +69,7 @@ func Test_gorillaEncoder_encodePoint_decodePoint(t *testing.T) {
 			// Encode
 			var buf bytes.Buffer
 			var num int
-			encoder := newSeriesEncoder(&buf)
+			encoder := newSeriesEncoder[float64](&buf)
 			for _, point := range tt.input {
 				err := encoder.encodePoint(point)
 				require.NoError(t, err)
@@ -81,11 +81,11 @@ func Test_gorillaEncoder_encodePoint_decodePoint(t *testing.T) {
 			assert.Equal(t, tt.wantEncodedByteSize, buf.Len())
 
 			// Decode
-			decoder, err := newSeriesDecoder(&buf)
+			decoder, err := newSeriesDecoder[float64](&buf)
 			require.NoError(t, err)
-			got := make([]*DataPoint, 0, num)
+			got := make([]*DataPoint[float64], 0, num)
 			for i := 0; i < num; i++ {
-				p := &DataPoint{}
+				p := &DataPoint[float64]{}
 				err := decoder.decodePoint(p)
 				require.NoError(t, err)
 				got = append(got, p)

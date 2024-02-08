@@ -10,12 +10,12 @@ import (
 func Test_storage_Select(t *testing.T) {
 	tests := []struct {
 		name    string
-		storage storage
+		storage storage[float64]
 		metric  string
 		labels  []Label
 		start   int64
 		end     int64
-		want    []*DataPoint
+		want    []*DataPoint[float64]
 		wantErr bool
 	}{
 		{
@@ -23,24 +23,24 @@ func Test_storage_Select(t *testing.T) {
 			metric: "metric1",
 			start:  1,
 			end:    4,
-			storage: func() storage {
-				part1 := newMemoryPartition(nil, 1*time.Hour, Seconds)
-				_, err := part1.insertRows([]Row{
-					{DataPoint: DataPoint{Timestamp: 1}, Metric: "metric1"},
-					{DataPoint: DataPoint{Timestamp: 2}, Metric: "metric1"},
-					{DataPoint: DataPoint{Timestamp: 3}, Metric: "metric1"},
+			storage: func() storage[float64] {
+				part1 := newMemoryPartition[float64](nil, 1*time.Hour, Seconds)
+				_, err := part1.insertRows([]Row[float64]{
+					{DataPoint: DataPoint[float64]{Timestamp: 1}, Metric: "metric1"},
+					{DataPoint: DataPoint[float64]{Timestamp: 2}, Metric: "metric1"},
+					{DataPoint: DataPoint[float64]{Timestamp: 3}, Metric: "metric1"},
 				})
 				if err != nil {
 					panic(err)
 				}
-				list := newPartitionList()
+				list := newPartitionList[float64]()
 				list.insert(part1)
-				return storage{
+				return storage[float64]{
 					partitionList:  list,
 					workersLimitCh: make(chan struct{}, defaultWorkersLimit),
 				}
 			}(),
-			want: []*DataPoint{
+			want: []*DataPoint[float64]{
 				{Timestamp: 1},
 				{Timestamp: 2},
 				{Timestamp: 3},
@@ -51,45 +51,45 @@ func Test_storage_Select(t *testing.T) {
 			metric: "metric1",
 			start:  1,
 			end:    10,
-			storage: func() storage {
-				part1 := newMemoryPartition(nil, 1*time.Hour, Seconds)
-				_, err := part1.insertRows([]Row{
-					{DataPoint: DataPoint{Timestamp: 1}, Metric: "metric1"},
-					{DataPoint: DataPoint{Timestamp: 2}, Metric: "metric1"},
-					{DataPoint: DataPoint{Timestamp: 3}, Metric: "metric1"},
+			storage: func() storage[float64] {
+				part1 := newMemoryPartition[float64](nil, 1*time.Hour, Seconds)
+				_, err := part1.insertRows([]Row[float64]{
+					{DataPoint: DataPoint[float64]{Timestamp: 1}, Metric: "metric1"},
+					{DataPoint: DataPoint[float64]{Timestamp: 2}, Metric: "metric1"},
+					{DataPoint: DataPoint[float64]{Timestamp: 3}, Metric: "metric1"},
 				})
 				if err != nil {
 					panic(err)
 				}
-				part2 := newMemoryPartition(nil, 1*time.Hour, Seconds)
-				_, err = part2.insertRows([]Row{
-					{DataPoint: DataPoint{Timestamp: 4}, Metric: "metric1"},
-					{DataPoint: DataPoint{Timestamp: 5}, Metric: "metric1"},
-					{DataPoint: DataPoint{Timestamp: 6}, Metric: "metric1"},
+				part2 := newMemoryPartition[float64](nil, 1*time.Hour, Seconds)
+				_, err = part2.insertRows([]Row[float64]{
+					{DataPoint: DataPoint[float64]{Timestamp: 4}, Metric: "metric1"},
+					{DataPoint: DataPoint[float64]{Timestamp: 5}, Metric: "metric1"},
+					{DataPoint: DataPoint[float64]{Timestamp: 6}, Metric: "metric1"},
 				})
 				if err != nil {
 					panic(err)
 				}
-				part3 := newMemoryPartition(nil, 1*time.Hour, Seconds)
-				_, err = part3.insertRows([]Row{
-					{DataPoint: DataPoint{Timestamp: 7}, Metric: "metric1"},
-					{DataPoint: DataPoint{Timestamp: 8}, Metric: "metric1"},
-					{DataPoint: DataPoint{Timestamp: 9}, Metric: "metric1"},
+				part3 := newMemoryPartition[float64](nil, 1*time.Hour, Seconds)
+				_, err = part3.insertRows([]Row[float64]{
+					{DataPoint: DataPoint[float64]{Timestamp: 7}, Metric: "metric1"},
+					{DataPoint: DataPoint[float64]{Timestamp: 8}, Metric: "metric1"},
+					{DataPoint: DataPoint[float64]{Timestamp: 9}, Metric: "metric1"},
 				})
 				if err != nil {
 					panic(err)
 				}
-				list := newPartitionList()
+				list := newPartitionList[float64]()
 				list.insert(part1)
 				list.insert(part2)
 				list.insert(part3)
 
-				return storage{
+				return storage[float64]{
 					partitionList:  list,
 					workersLimitCh: make(chan struct{}, defaultWorkersLimit),
 				}
 			}(),
-			want: []*DataPoint{
+			want: []*DataPoint[float64]{
 				{Timestamp: 1},
 				{Timestamp: 2},
 				{Timestamp: 3},

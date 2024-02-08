@@ -9,20 +9,20 @@ package tstorage
 //   it can be written. Only one partition can be writable within a partition list.
 // *ReadOnly*:
 //   it can't be written. Partitions will be ReadOnly if it exceeds the partition range.
-type partition interface {
+type partition[T any] interface {
 	// Write operations
 	//
 	// insertRows is a goroutine safe way to insert data points into itself.
 	// If data points older than its min timestamp were given, they won't be
 	// ingested, instead, gave back as a first returned value.
-	insertRows(rows []Row) (outdatedRows []Row, err error)
+	insertRows(rows []Row[T]) (outdatedRows []Row[T], err error)
 	// clean removes everything managed by this partition.
 	clean() error
 
 	// Read operations
 	//
 	// selectDataPoints gives back certain metric's data points within the given range.
-	selectDataPoints(metric string, labels []Label, start, end int64) ([]*DataPoint, error)
+	selectDataPoints(metric string, labels []Label, start, end int64) ([]*DataPoint[T], error)
 	// minTimestamp returns the minimum Unix timestamp in milliseconds.
 	minTimestamp() int64
 	// maxTimestamp returns the maximum Unix timestamp in milliseconds.

@@ -12,7 +12,7 @@ func TestOpenDiskPartition(t *testing.T) {
 		name      string
 		dirPath   string
 		retention time.Duration
-		want      partition
+		want      partition[float64]
 		wantErr   bool
 	}{
 		{
@@ -30,7 +30,7 @@ func TestOpenDiskPartition(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := openDiskPartition(tt.dirPath, tt.retention)
+			got, err := openDiskPartition[float64](tt.dirPath, tt.retention)
 			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, tt.want, got)
 		})

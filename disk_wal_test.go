@@ -13,11 +13,11 @@ import (
 func Test_diskWAL_append_read(t *testing.T) {
 	var (
 		op   = operationInsert
-		rows = []Row{
-			{Metric: "metric-1", DataPoint: DataPoint{Value: 0.1, Timestamp: 1600000000}},
-			{Metric: "metric-2", DataPoint: DataPoint{Value: 0.2, Timestamp: 1600000001}},
-			{Metric: "metric-1", DataPoint: DataPoint{Value: 0.1, Timestamp: 1600000001}},
-			{Metric: "metric-2", DataPoint: DataPoint{Value: 0.2, Timestamp: 1600000003}},
+		rows = []Row[float64]{
+			{Metric: "metric-1", DataPoint: DataPoint[float64]{Value: 0.1, Timestamp: 1600000000}},
+			{Metric: "metric-2", DataPoint: DataPoint[float64]{Value: 0.2, Timestamp: 1600000001}},
+			{Metric: "metric-1", DataPoint: DataPoint[float64]{Value: 0.1, Timestamp: 1600000001}},
+			{Metric: "metric-2", DataPoint: DataPoint[float64]{Value: 0.2, Timestamp: 1600000003}},
 		}
 	)
 	// Append rows into wal
@@ -26,7 +26,7 @@ func Test_diskWAL_append_read(t *testing.T) {
 	require.NoError(t, err)
 	path := filepath.Join(tmpDir, "wal")
 
-	wal, err := newDiskWAL(path, 4096)
+	wal, err := newDiskWAL[float64](path, 4096)
 	require.NoError(t, err)
 
 	// Append into two segments
@@ -43,7 +43,7 @@ func Test_diskWAL_append_read(t *testing.T) {
 	require.NoError(t, err)
 
 	// Recover rows.
-	reader, err := newDiskWALReader(path)
+	reader, err := newDiskWALReader[float64](path)
 	require.NoError(t, err)
 	err = reader.readAll()
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func Test_diskWAL_removeOldest(t *testing.T) {
 		err := os.Mkdir(filepath.Join(tmpDir, strconv.Itoa(i)), os.ModePerm)
 		require.NoError(t, err)
 	}
-	w := &diskWAL{
+	w := &diskWAL[float64]{
 		dir: tmpDir,
 	}
 	err = w.removeOldest()

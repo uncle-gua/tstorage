@@ -25,7 +25,7 @@ var (
 // A disk partition implements a partition that uses local disk as a storage.
 // It mainly has two files, data file and meta file.
 // The data file is memory-mapped and read only; no need to lock at all.
-type diskPartition struct {
+type diskPartition[T any] struct {
 	dirPath string
 	meta    meta
 	// file descriptor of data file
@@ -56,7 +56,7 @@ type diskMetric struct {
 }
 
 // openDiskPartition first maps the data file into memory with memory-mapping.
-func openDiskPartition(dirPath string, retention time.Duration) (partition, error) {
+func openDiskPartition[T any](dirPath string, retention time.Duration) (partition[T], error) {
 	if dirPath == "" {
 		return nil, fmt.Errorf("dir path is required")
 	}
@@ -96,7 +96,7 @@ func openDiskPartition(dirPath string, retention time.Duration) (partition, erro
 	if err := decoder.Decode(&m); err != nil {
 		return nil, fmt.Errorf("failed to decode metadata: %w", err)
 	}
-	return &diskPartition{
+	return &diskPartition[T]{
 		dirPath:    dirPath,
 		meta:       m,
 		f:          f,
@@ -105,11 +105,11 @@ func openDiskPartition(dirPath string, retention time.Duration) (partition, erro
 	}, nil
 }
 
-func (d *diskPartition) insertRows(_ []Row) ([]Row, error) {
+func (d *diskPartition[T]) insertRows(_ []Row[T]) ([]Row[T], error) {
 	return nil, fmt.Errorf("can't insert rows into disk partition")
 }
 
-func (d *diskPartition) selectDataPoints(metric string, labels []Label, start, end int64) ([]*DataPoint, error) {
+func (d *diskPartition[T]) selectDataPoints(metric string, labels []Label, start, end int64) ([]*DataPoint[T], error) {
 	if d.expired() {
 		return nil, fmt.Errorf("this partition is expired: %w", ErrNoDataPoints)
 	}
@@ -122,15 +122,15 @@ func (d *diskPartition) selectDataPoints(metric string, labels []Label, start, e
 	if _, err := r.Seek(mt.Offset, io.SeekStart); err != nil {
 		return nil, fmt.Errorf("failed to seek: %w", err)
 	}
-	decoder, err := newSeriesDecoder(r)
+	decoder, err := newSeriesDecoder[T](r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate decoder for metric %q in %q: %w", name, d.dirPath, err)
 	}
 
 	// TODO: Divide fixed-lengh chunks when flushing, and index it.
-	points := make([]*DataPoint, 0, mt.NumDataPoints)
+	points := make([]*DataPoint[T], 0, mt.NumDataPoints)
 	for i := 0; i < int(mt.NumDataPoints); i++ {
-		point := &DataPoint{}
+		point := &DataPoint[T]{}
 		if err := decoder.decodePoint(point); err != nil {
 			return nil, fmt.Errorf("failed to decode point of metric %q in %q: %w", name, d.dirPath, err)
 		}
@@ -145,24 +145,24 @@ func (d *diskPartition) selectDataPoints(metric string, labels []Label, start, e
 	return points, nil
 }
 
-func (d *diskPartition) minTimestamp() int64 {
+func (d *diskPartition[T]) minTimestamp() int64 {
 	return d.meta.MinTimestamp
 }
 
-func (d *diskPartition) maxTimestamp() int64 {
+func (d *diskPartition[T]) maxTimestamp() int64 {
 	return d.meta.MaxTimestamp
 }
 
-func (d *diskPartition) size() int {
+func (d *diskPartition[T]) size() int {
 	return d.meta.NumDataPoints
 }
 
 // Disk partition is immutable.
-func (d *diskPartition) active() bool {
+func (d *diskPartition[T]) active() bool {
 	return false
 }
 
-func (d *diskPartition) clean() error {
+func (d *diskPartition[T]) clean() error {
 	if err := os.RemoveAll(d.dirPath); err != nil {
 		return fmt.Errorf("failed to remove all files inside the partition (%d~%d): %w", d.minTimestamp(), d.maxTimestamp(), err)
 	}
@@ -170,7 +170,7 @@ func (d *diskPartition) clean() error {
 	return nil
 }
 
-func (d *diskPartition) expired() bool {
+func (d *diskPartition[T]) expired() bool {
 	diff := time.Since(d.meta.CreatedAt)
 	if diff > d.retention {
 		return true

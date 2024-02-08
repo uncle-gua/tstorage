@@ -12,8 +12,8 @@ import (
 
 func ExampleNewStorage_withDataPath() {
 	// It will make time-series data persistent under "./data".
-	storage, err := tstorage.NewStorage(
-		tstorage.WithDataPath("./data"),
+	storage, err := tstorage.NewStorage[float64](
+		tstorage.WithDataPath[float64]("./data"),
 	)
 	if err != nil {
 		panic(err)
@@ -22,9 +22,9 @@ func ExampleNewStorage_withDataPath() {
 }
 
 func ExampleNewStorage_withPartitionDuration() {
-	storage, err := tstorage.NewStorage(
-		tstorage.WithPartitionDuration(30*time.Minute),
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
+	storage, err := tstorage.NewStorage[float64](
+		tstorage.WithPartitionDuration[float64](30*time.Minute),
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
 	)
 	if err != nil {
 		panic(err)
@@ -33,8 +33,8 @@ func ExampleNewStorage_withPartitionDuration() {
 }
 
 func ExampleStorage_InsertRows() {
-	storage, err := tstorage.NewStorage(
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
+	storage, err := tstorage.NewStorage[float64](
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
 	)
 	if err != nil {
 		panic(err)
@@ -44,8 +44,8 @@ func ExampleStorage_InsertRows() {
 			panic(err)
 		}
 	}()
-	err = storage.InsertRows([]tstorage.Row{
-		{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: 1600000000, Value: 0.1}},
+	err = storage.InsertRows([]tstorage.Row[float64]{
+		{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000000, Value: 0.1}},
 	})
 	if err != nil {
 		panic(err)
@@ -63,9 +63,9 @@ func ExampleStorage_InsertRows() {
 
 // simulates writing and reading in concurrent.
 func ExampleStorage_InsertRows_Select_concurrent() {
-	storage, err := tstorage.NewStorage(
-		tstorage.WithPartitionDuration(5*time.Hour),
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
+	storage, err := tstorage.NewStorage[float64](
+		tstorage.WithPartitionDuration[float64](5*time.Hour),
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
 	)
 	if err != nil {
 		panic(err)
@@ -86,8 +86,8 @@ func ExampleStorage_InsertRows_Select_concurrent() {
 			wg.Add(1)
 			go func(timestamp int64) {
 				defer wg.Done()
-				if err := storage.InsertRows([]tstorage.Row{
-					{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: timestamp}},
+				if err := storage.InsertRows([]tstorage.Row[float64]{
+					{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: timestamp}},
 				}); err != nil {
 					panic(err)
 				}
@@ -127,10 +127,10 @@ func ExampleStorage_Select_from_memory() {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	storage, err := tstorage.NewStorage(
-		tstorage.WithDataPath(tmpDir),
-		tstorage.WithPartitionDuration(2*time.Hour),
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
+	storage, err := tstorage.NewStorage[float64](
+		tstorage.WithDataPath[float64](tmpDir),
+		tstorage.WithPartitionDuration[float64](2*time.Hour),
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
 	)
 	if err != nil {
 		panic(err)
@@ -143,8 +143,8 @@ func ExampleStorage_Select_from_memory() {
 
 	// Ingest data points of metric1
 	for timestamp := int64(1600000000); timestamp < 1600000050; timestamp++ {
-		err := storage.InsertRows([]tstorage.Row{
-			{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: timestamp, Value: 0.1}},
+		err := storage.InsertRows([]tstorage.Row[float64]{
+			{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: timestamp, Value: 0.1}},
 		})
 		if err != nil {
 			panic(err)
@@ -152,8 +152,8 @@ func ExampleStorage_Select_from_memory() {
 	}
 	// Ingest data points of metric2
 	for timestamp := int64(1600000050); timestamp < 1600000100; timestamp++ {
-		err := storage.InsertRows([]tstorage.Row{
-			{Metric: "metric2", DataPoint: tstorage.DataPoint{Timestamp: timestamp, Value: 0.2}},
+		err := storage.InsertRows([]tstorage.Row[float64]{
+			{Metric: "metric2", DataPoint: tstorage.DataPoint[float64]{Timestamp: timestamp, Value: 0.2}},
 		})
 		if err != nil {
 			panic(err)
@@ -296,10 +296,10 @@ func ExampleStorage_Select_from_disk() {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	storage, err := tstorage.NewStorage(
-		tstorage.WithDataPath(tmpDir),
-		tstorage.WithPartitionDuration(100*time.Second),
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
+	storage, err := tstorage.NewStorage[float64](
+		tstorage.WithDataPath[float64](tmpDir),
+		tstorage.WithPartitionDuration[float64](100*time.Second),
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
 	)
 	if err != nil {
 		panic(err)
@@ -307,14 +307,14 @@ func ExampleStorage_Select_from_disk() {
 
 	// Ingest data points
 	for timestamp := int64(1600000000); timestamp < 1600000050; timestamp++ {
-		err := storage.InsertRows([]tstorage.Row{
-			{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: timestamp, Value: 0.1}},
+		err := storage.InsertRows([]tstorage.Row[float64]{
+			{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: timestamp, Value: 0.1}},
 		})
 		if err != nil {
 			panic(err)
 		}
-		err = storage.InsertRows([]tstorage.Row{
-			{Metric: "metric2", DataPoint: tstorage.DataPoint{Timestamp: timestamp, Value: 0.2}},
+		err = storage.InsertRows([]tstorage.Row[float64]{
+			{Metric: "metric2", DataPoint: tstorage.DataPoint[float64]{Timestamp: timestamp, Value: 0.2}},
 		})
 		if err != nil {
 			panic(err)
@@ -326,10 +326,10 @@ func ExampleStorage_Select_from_disk() {
 	}
 
 	// Re-open storage from the persisted data
-	storage, err = tstorage.NewStorage(
-		tstorage.WithDataPath(tmpDir),
-		tstorage.WithPartitionDuration(10*time.Second),
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
+	storage, err = tstorage.NewStorage[float64](
+		tstorage.WithDataPath[float64](tmpDir),
+		tstorage.WithPartitionDuration[float64](10*time.Second),
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
 	)
 	if err != nil {
 		panic(err)
@@ -471,8 +471,8 @@ func ExampleStorage_Select_from_disk() {
 // Out of order data points that are not yet flushed are in the buffer
 // but do not appear in select.
 func ExampleStorage_Select_from_memory_out_of_order() {
-	storage, err := tstorage.NewStorage(
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
+	storage, err := tstorage.NewStorage[float64](
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
 	)
 	if err != nil {
 		panic(err)
@@ -482,11 +482,11 @@ func ExampleStorage_Select_from_memory_out_of_order() {
 			panic(err)
 		}
 	}()
-	err = storage.InsertRows([]tstorage.Row{
-		{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: 1600000000, Value: 0.1}},
-		{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: 1600000002, Value: 0.1}},
-		{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: 1600000001, Value: 0.1}},
-		{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: 1600000003, Value: 0.1}},
+	err = storage.InsertRows([]tstorage.Row[float64]{
+		{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000000, Value: 0.1}},
+		{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000002, Value: 0.1}},
+		{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000001, Value: 0.1}},
+		{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000003, Value: 0.1}},
 	})
 	if err != nil {
 		panic(err)
@@ -515,20 +515,20 @@ func ExampleStorage_Select_from_disk_out_of_order() {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	storage, err := tstorage.NewStorage(
-		tstorage.WithDataPath(tmpDir),
-		tstorage.WithPartitionDuration(100*time.Second),
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
+	storage, err := tstorage.NewStorage[float64](
+		tstorage.WithDataPath[float64](tmpDir),
+		tstorage.WithPartitionDuration[float64](100*time.Second),
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
 	)
 	if err != nil {
 		panic(err)
 	}
 
-	err = storage.InsertRows([]tstorage.Row{
-		{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: 1600000000, Value: 0.1}},
-		{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: 1600000002, Value: 0.1}},
-		{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: 1600000001, Value: 0.1}},
-		{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: 1600000003, Value: 0.1}},
+	err = storage.InsertRows([]tstorage.Row[float64]{
+		{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000000, Value: 0.1}},
+		{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000002, Value: 0.1}},
+		{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000001, Value: 0.1}},
+		{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000003, Value: 0.1}},
 	})
 	if err != nil {
 		panic(err)
@@ -540,10 +540,10 @@ func ExampleStorage_Select_from_disk_out_of_order() {
 	}
 
 	// Re-open storage from the persisted data
-	storage, err = tstorage.NewStorage(
-		tstorage.WithDataPath(tmpDir),
-		tstorage.WithPartitionDuration(100*time.Second),
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
+	storage, err = tstorage.NewStorage[float64](
+		tstorage.WithDataPath[float64](tmpDir),
+		tstorage.WithPartitionDuration[float64](100*time.Second),
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
 	)
 	if err != nil {
 		panic(err)
@@ -579,26 +579,26 @@ func ExampleStorage_InsertRows_outdated() {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	storage, err := tstorage.NewStorage(
-		tstorage.WithDataPath(tmpDir),
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
-		tstorage.WithPartitionDuration(3*time.Second),
+	storage, err := tstorage.NewStorage[float64](
+		tstorage.WithDataPath[float64](tmpDir),
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
+		tstorage.WithPartitionDuration[float64](3*time.Second),
 	)
 	if err != nil {
 		panic(err)
 	}
 
 	// Force two partitions with timestamps: (min: 1, max: 3), (min: 4, max: 5)
-	err = storage.InsertRows([]tstorage.Row{
-		{DataPoint: tstorage.DataPoint{Timestamp: 1600000001, Value: 0.1}, Metric: "metric1"},
-		{DataPoint: tstorage.DataPoint{Timestamp: 1600000003, Value: 0.1}, Metric: "metric1"},
+	err = storage.InsertRows([]tstorage.Row[float64]{
+		{DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000001, Value: 0.1}, Metric: "metric1"},
+		{DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000003, Value: 0.1}, Metric: "metric1"},
 	})
 	if err != nil {
 		panic(err)
 	}
-	err = storage.InsertRows([]tstorage.Row{
-		{DataPoint: tstorage.DataPoint{Timestamp: 1600000004, Value: 0.1}, Metric: "metric1"},
-		{DataPoint: tstorage.DataPoint{Timestamp: 1600000005, Value: 0.1}, Metric: "metric1"},
+	err = storage.InsertRows([]tstorage.Row[float64]{
+		{DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000004, Value: 0.1}, Metric: "metric1"},
+		{DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000005, Value: 0.1}, Metric: "metric1"},
 	})
 	if err != nil {
 		panic(err)
@@ -606,8 +606,8 @@ func ExampleStorage_InsertRows_outdated() {
 
 	// Insert a data point that doesn't belong to the head partition. This will be inserted
 	// into the next partition out of order.
-	err = storage.InsertRows([]tstorage.Row{
-		{DataPoint: tstorage.DataPoint{Timestamp: 1600000002, Value: 0.1}, Metric: "metric1"},
+	err = storage.InsertRows([]tstorage.Row[float64]{
+		{DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000002, Value: 0.1}, Metric: "metric1"},
 	})
 	if err != nil {
 		panic(err)
@@ -619,10 +619,10 @@ func ExampleStorage_InsertRows_outdated() {
 	}
 
 	// Re-open storage from the persisted data
-	storage, err = tstorage.NewStorage(
-		tstorage.WithDataPath(tmpDir),
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
-		tstorage.WithPartitionDuration(3*time.Second),
+	storage, err = tstorage.NewStorage[float64](
+		tstorage.WithDataPath[float64](tmpDir),
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
+		tstorage.WithPartitionDuration[float64](3*time.Second),
 	)
 	if err != nil {
 		panic(err)
@@ -656,10 +656,10 @@ func ExampleStorage_InsertRows_expired() {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	storage, err := tstorage.NewStorage(
-		tstorage.WithDataPath(tmpDir),
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
-		tstorage.WithPartitionDuration(3*time.Second),
+	storage, err := tstorage.NewStorage[float64](
+		tstorage.WithDataPath[float64](tmpDir),
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
+		tstorage.WithPartitionDuration[float64](3*time.Second),
 	)
 	if err != nil {
 		panic(err)
@@ -667,32 +667,32 @@ func ExampleStorage_InsertRows_expired() {
 
 	// Force three partitions with timestamps: (min: 1, max: 3), (min: 4, max: 6), (min: 7, max: 8).
 	// Inserting the third partition will force the first one to be flushed to disk and become unwritable.
-	err = storage.InsertRows([]tstorage.Row{
-		{DataPoint: tstorage.DataPoint{Timestamp: 1600000001, Value: 0.1}, Metric: "metric1"},
-		{DataPoint: tstorage.DataPoint{Timestamp: 1600000003, Value: 0.1}, Metric: "metric1"},
+	err = storage.InsertRows([]tstorage.Row[float64]{
+		{DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000001, Value: 0.1}, Metric: "metric1"},
+		{DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000003, Value: 0.1}, Metric: "metric1"},
 	})
 	if err != nil {
 		panic(err)
 	}
-	err = storage.InsertRows([]tstorage.Row{
-		{DataPoint: tstorage.DataPoint{Timestamp: 1600000004, Value: 0.1}, Metric: "metric1"},
-		{DataPoint: tstorage.DataPoint{Timestamp: 1600000005, Value: 0.1}, Metric: "metric1"},
-		{DataPoint: tstorage.DataPoint{Timestamp: 1600000006, Value: 0.1}, Metric: "metric1"},
+	err = storage.InsertRows([]tstorage.Row[float64]{
+		{DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000004, Value: 0.1}, Metric: "metric1"},
+		{DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000005, Value: 0.1}, Metric: "metric1"},
+		{DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000006, Value: 0.1}, Metric: "metric1"},
 	})
 	if err != nil {
 		panic(err)
 	}
-	err = storage.InsertRows([]tstorage.Row{
-		{DataPoint: tstorage.DataPoint{Timestamp: 1600000007, Value: 0.1}, Metric: "metric1"},
-		{DataPoint: tstorage.DataPoint{Timestamp: 1600000008, Value: 0.1}, Metric: "metric1"},
+	err = storage.InsertRows([]tstorage.Row[float64]{
+		{DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000007, Value: 0.1}, Metric: "metric1"},
+		{DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000008, Value: 0.1}, Metric: "metric1"},
 	})
 	if err != nil {
 		panic(err)
 	}
 
 	// Try to insert a data point into an already flushed partition.
-	err = storage.InsertRows([]tstorage.Row{
-		{DataPoint: tstorage.DataPoint{Timestamp: 1600000002, Value: 0.1}, Metric: "metric1"},
+	err = storage.InsertRows([]tstorage.Row[float64]{
+		{DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000002, Value: 0.1}, Metric: "metric1"},
 	})
 	if err != nil {
 		panic(err)
@@ -704,10 +704,10 @@ func ExampleStorage_InsertRows_expired() {
 	}
 
 	// Re-open storage from the persisted data
-	storage, err = tstorage.NewStorage(
-		tstorage.WithDataPath(tmpDir),
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
-		tstorage.WithPartitionDuration(3*time.Second),
+	storage, err = tstorage.NewStorage[float64](
+		tstorage.WithDataPath[float64](tmpDir),
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
+		tstorage.WithPartitionDuration[float64](3*time.Second),
 	)
 	if err != nil {
 		panic(err)
@@ -739,8 +739,8 @@ func ExampleStorage_InsertRows_expired() {
 }
 
 func ExampleStorage_InsertRows_concurrent() {
-	storage, err := tstorage.NewStorage(
-		tstorage.WithTimestampPrecision(tstorage.Seconds),
+	storage, err := tstorage.NewStorage[float64](
+		tstorage.WithTimestampPrecision[float64](tstorage.Seconds),
 	)
 	if err != nil {
 		panic(err)
@@ -748,8 +748,8 @@ func ExampleStorage_InsertRows_concurrent() {
 	defer storage.Close()
 
 	// First insert in order to ensure min timestamp
-	if err := storage.InsertRows([]tstorage.Row{
-		{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: 1600000000}},
+	if err := storage.InsertRows([]tstorage.Row[float64]{
+		{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: 1600000000}},
 	}); err != nil {
 		panic(err)
 	}
@@ -758,8 +758,8 @@ func ExampleStorage_InsertRows_concurrent() {
 	for i := int64(1600000001); i < 1600000100; i++ {
 		wg.Add(1)
 		go func(timestamp int64) {
-			if err := storage.InsertRows([]tstorage.Row{
-				{Metric: "metric1", DataPoint: tstorage.DataPoint{Timestamp: timestamp}},
+			if err := storage.InsertRows([]tstorage.Row[float64]{
+				{Metric: "metric1", DataPoint: tstorage.DataPoint[float64]{Timestamp: timestamp}},
 			}); err != nil {
 				panic(err)
 			}

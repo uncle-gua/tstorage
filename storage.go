@@ -50,37 +50,37 @@ const (
 )
 
 // Storage provides goroutine safe capabilities of insertion into and retrieval from the time-series storage.
-type Storage interface {
-	Reader
+type Storage[T any] interface {
+	Reader[T]
 	// InsertRows ingests the given rows to the time-series storage.
 	// If the timestamp is empty, it uses the machine's local timestamp in UTC.
 	// The precision of timestamps is nanoseconds by default. It can be changed using WithTimestampPrecision.
-	InsertRows(rows []Row) error
+	InsertRows(rows []Row[T]) error
 	// Close gracefully shutdowns by flushing any unwritten data to the underlying disk partition.
 	Close() error
 }
 
 // Reader provides reading access to time series data.
-type Reader interface {
+type Reader[T any] interface {
 	// Select gives back a list of data points that matches a set of the given metric and
 	// labels within the given start-end range. Keep in mind that start is inclusive, end is exclusive,
 	// and both must be Unix timestamp. ErrNoDataPoints will be returned if no data points found.
-	Select(metric string, labels []Label, start, end int64) (points []*DataPoint, err error)
+	Select(metric string, labels []Label, start, end int64) (points []*DataPoint[T], err error)
 }
 
 // Row includes a data point along with properties to identify a kind of metrics.
-type Row struct {
+type Row[T any] struct {
 	// The unique name of metric.
 	// This field must be set.
 	Metric string
 	// An optional key-value properties to further detailed identification.
 	Labels []Label
 	// This field must be set.
-	DataPoint
+	DataPoint[T]
 }
 
 // DataPoint represents a data point, the smallest unit of time series data.
-type DataPoint struct {
+type DataPoint[T any] struct {
 	// The actual value. This field must be set.
 	Value float64
 	// Unix timestamp.
@@ -88,14 +88,14 @@ type DataPoint struct {
 }
 
 // Option is an optional setting for NewStorage.
-type Option func(*storage)
+type Option[T any] func(*storage[T])
 
 // WithDataPath specifies the path to directory that stores time-series data.
 // Use this to make time-series data persistent on disk.
 //
 // Defaults to empty string which means no data will get persisted.
-func WithDataPath(dataPath string) Option {
-	return func(s *storage) {
+func WithDataPath[T any](dataPath string) Option[T] {
+	return func(s *storage[T]) {
 		s.dataPath = dataPath
 	}
 }
@@ -108,8 +108,8 @@ func WithDataPath(dataPath string) Option {
 // points for its time range.
 //
 // Defaults to 1h
-func WithPartitionDuration(duration time.Duration) Option {
-	return func(s *storage) {
+func WithPartitionDuration[T any](duration time.Duration) Option[T] {
+	return func(s *storage[T]) {
 		s.partitionDuration = duration
 	}
 }
@@ -118,8 +118,8 @@ func WithPartitionDuration(duration time.Duration) Option {
 // Data points will get automatically removed from the disk after a
 // specified period of time after a disk partition was created.
 // Defaults to 14d.
-func WithRetention(retention time.Duration) Option {
-	return func(s *storage) {
+func WithRetention[T any](retention time.Duration) Option[T] {
+	return func(s *storage[T]) {
 		s.retention = retention
 	}
 }
@@ -127,8 +127,8 @@ func WithRetention(retention time.Duration) Option {
 // WithTimestampPrecision specifies the precision of timestamps to be used by all operations.
 //
 // Defaults to Nanoseconds
-func WithTimestampPrecision(precision TimestampPrecision) Option {
-	return func(s *storage) {
+func WithTimestampPrecision[T any](precision TimestampPrecision) Option[T] {
+	return func(s *storage[T]) {
 		s.timestampPrecision = precision
 	}
 }
@@ -139,8 +139,8 @@ func WithTimestampPrecision(precision TimestampPrecision) Option {
 // errors and CPU trashing even if too many goroutines attempt to write.
 //
 // Defaults to 30s.
-func WithWriteTimeout(timeout time.Duration) Option {
-	return func(s *storage) {
+func WithWriteTimeout[T any](timeout time.Duration) Option[T] {
+	return func(s *storage[T]) {
 		s.writeTimeout = timeout
 	}
 }
@@ -148,8 +148,8 @@ func WithWriteTimeout(timeout time.Duration) Option {
 // WithLogger specifies the logger to emit verbose output.
 //
 // Defaults to a logger implementation that does nothing.
-func WithLogger(logger Logger) Option {
-	return func(s *storage) {
+func WithLogger[T any](logger Logger) Option[T] {
+	return func(s *storage[T]) {
 		s.logger = logger
 	}
 }
@@ -160,8 +160,8 @@ func WithLogger(logger Logger) Option {
 // Giving -1 disables using WAL.
 //
 // Defaults to 4096.
-func WithWALBufferedSize(size int) Option {
-	return func(s *storage) {
+func WithWALBufferedSize[T any](size int) Option[T] {
+	return func(s *storage[T]) {
 		s.walBufferedSize = size
 	}
 }
@@ -170,18 +170,18 @@ func WithWALBufferedSize(size int) Option {
 //
 // Give the WithDataPath option for running as a on-disk storage. Specify a directory with data already exists,
 // then it will be read as the initial data.
-func NewStorage(opts ...Option) (Storage, error) {
-	s := &storage{
-		partitionList:      newPartitionList(),
+func NewStorage[T any](opts ...Option[T]) (Storage[T], error) {
+	s := &storage[T]{
+		partitionList:      newPartitionList[T](),
 		workersLimitCh:     make(chan struct{}, defaultWorkersLimit),
 		partitionDuration:  defaultPartitionDuration,
 		retention:          defaultRetention,
 		timestampPrecision: defaultTimestampPrecision,
 		writeTimeout:       defaultWriteTimeout,
 		walBufferedSize:    defaultWALBufferedSize,
-		wal:                &nopWAL{},
+		wal:                &nopWAL[T]{},
 		logger:             &nopLogger{},
-		doneCh:             make(chan struct{}, 0),
+		doneCh:             make(chan struct{}),
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -198,7 +198,7 @@ func NewStorage(opts ...Option) (Storage, error) {
 
 	walDir := filepath.Join(s.dataPath, walDirName)
 	if s.walBufferedSize >= 0 {
-		wal, err := newDiskWAL(walDir, s.walBufferedSize)
+		wal, err := newDiskWAL[T](walDir, s.walBufferedSize)
 		if err != nil {
 			return nil, err
 		}
@@ -217,13 +217,13 @@ func NewStorage(opts ...Option) (Storage, error) {
 	isPartitionDir := func(f fs.DirEntry) bool {
 		return f.IsDir() && partitionDirRegex.MatchString(f.Name())
 	}
-	partitions := make([]partition, 0, len(dirs))
+	partitions := make([]partition[T], 0, len(dirs))
 	for _, e := range dirs {
 		if !isPartitionDir(e) {
 			continue
 		}
 		path := filepath.Join(s.dataPath, e.Name())
-		part, err := openDiskPartition(path, s.retention)
+		part, err := openDiskPartition[T](path, s.retention)
 		if errors.Is(err, ErrNoDataPoints) {
 			continue
 		}
@@ -267,11 +267,11 @@ func NewStorage(opts ...Option) (Storage, error) {
 	return s, nil
 }
 
-type storage struct {
-	partitionList partitionList
+type storage[T any] struct {
+	partitionList partitionList[T]
 
 	walBufferedSize    int
-	wal                wal
+	wal                wal[T]
 	partitionDuration  time.Duration
 	retention          time.Duration
 	timestampPrecision TimestampPrecision
@@ -286,7 +286,7 @@ type storage struct {
 	doneCh chan struct{}
 }
 
-func (s *storage) InsertRows(rows []Row) error {
+func (s *storage[T]) InsertRows(rows []Row[T]) error {
 	s.wg.Add(1)
 	defer s.wg.Done()
 
@@ -341,7 +341,7 @@ func (s *storage) InsertRows(rows []Row) error {
 
 // ensureActiveHead ensures the head of partitionList is an active partition.
 // If none, it creates a new one.
-func (s *storage) ensureActiveHead() error {
+func (s *storage[T]) ensureActiveHead() error {
 	head := s.partitionList.getHead()
 	if head != nil && head.active() {
 		return nil
@@ -359,14 +359,14 @@ func (s *storage) ensureActiveHead() error {
 	return nil
 }
 
-func (s *storage) Select(metric string, labels []Label, start, end int64) ([]*DataPoint, error) {
+func (s *storage[T]) Select(metric string, labels []Label, start, end int64) ([]*DataPoint[T], error) {
 	if metric == "" {
 		return nil, fmt.Errorf("metric must be set")
 	}
 	if start >= end {
 		return nil, fmt.Errorf("the given start is greater than end")
 	}
-	points := make([]*DataPoint, 0)
+	points := make([]*DataPoint[T], 0)
 
 	// Iterate over all partitions from the newest one.
 	iterator := s.partitionList.newIterator()
@@ -402,7 +402,7 @@ func (s *storage) Select(metric string, labels []Label, start, end int64) ([]*Da
 	return points, nil
 }
 
-func (s *storage) Close() error {
+func (s *storage[T]) Close() error {
 	s.wg.Wait()
 	close(s.doneCh)
 	if err := s.wal.flush(); err != nil {
@@ -430,7 +430,7 @@ func (s *storage) Close() error {
 	return nil
 }
 
-func (s *storage) newPartition(p partition, punctuateWal bool) error {
+func (s *storage[T]) newPartition(p partition[T], punctuateWal bool) error {
 	if p == nil {
 		p = newMemoryPartition(s.wal, s.partitionDuration, s.timestampPrecision)
 	}
@@ -443,7 +443,7 @@ func (s *storage) newPartition(p partition, punctuateWal bool) error {
 
 // flushPartitions persists all in-memory partitions ready to persisted.
 // For the in-memory mode, just removes it from the partition list.
-func (s *storage) flushPartitions() error {
+func (s *storage[T]) flushPartitions() error {
 	// Keep the first two partitions as is even if they are inactive,
 	// to accept out-of-order data points.
 	i := 0
@@ -457,7 +457,7 @@ func (s *storage) flushPartitions() error {
 		if part == nil {
 			return fmt.Errorf("unexpected empty partition found")
 		}
-		memPart, ok := part.(*memoryPartition)
+		memPart, ok := part.(*memoryPartition[T])
 		if !ok {
 			continue
 		}
@@ -476,7 +476,7 @@ func (s *storage) flushPartitions() error {
 		if err := s.flush(dir, memPart); err != nil {
 			return fmt.Errorf("failed to compact memory partition into %s: %w", dir, err)
 		}
-		newPart, err := openDiskPartition(dir, s.retention)
+		newPart, err := openDiskPartition[T](dir, s.retention)
 		if errors.Is(err, ErrNoDataPoints) {
 			if err := s.partitionList.remove(part); err != nil {
 				return fmt.Errorf("failed to remove partition: %w", err)
@@ -498,7 +498,7 @@ func (s *storage) flushPartitions() error {
 }
 
 // flush compacts the data points in the given partition and flushes them to the given directory.
-func (s *storage) flush(dirPath string, m *memoryPartition) error {
+func (s *storage[T]) flush(dirPath string, m *memoryPartition[T]) error {
 	if dirPath == "" {
 		return fmt.Errorf("dir path is required")
 	}
@@ -512,11 +512,11 @@ func (s *storage) flush(dirPath string, m *memoryPartition) error {
 		return fmt.Errorf("failed to create file %q: %w", dirPath, err)
 	}
 	defer f.Close()
-	encoder := newSeriesEncoder(f)
+	encoder := newSeriesEncoder[T](f)
 
 	metrics := map[string]diskMetric{}
 	m.metrics.Range(func(key, value interface{}) bool {
-		mt, ok := value.(*memoryMetric)
+		mt, ok := value.(*memoryMetric[T])
 		if !ok {
 			s.logger.Printf("unknown value found\n")
 			return false
@@ -567,8 +567,8 @@ func (s *storage) flush(dirPath string, m *memoryPartition) error {
 	return nil
 }
 
-func (s *storage) removeExpiredPartitions() error {
-	expiredList := make([]partition, 0)
+func (s *storage[T]) removeExpiredPartitions() error {
+	expiredList := make([]partition[T], 0)
 	iterator := s.partitionList.newIterator()
 	for iterator.next() {
 		part := iterator.value()
@@ -589,8 +589,8 @@ func (s *storage) removeExpiredPartitions() error {
 }
 
 // recoverWAL inserts all records within the given wal, and then removes all WAL segment files.
-func (s *storage) recoverWAL(walDir string) error {
-	reader, err := newDiskWALReader(walDir)
+func (s *storage[T]) recoverWAL(walDir string) error {
+	reader, err := newDiskWALReader[T](walDir)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
@@ -611,6 +611,6 @@ func (s *storage) recoverWAL(walDir string) error {
 	return s.wal.refresh()
 }
 
-func (s *storage) inMemoryMode() bool {
+func (s *storage[T]) inMemoryMode() bool {
 	return s.dataPath == ""
 }

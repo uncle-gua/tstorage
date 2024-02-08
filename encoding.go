@@ -32,13 +32,13 @@ import (
 	"math/bits"
 )
 
-type seriesEncoder interface {
-	encodePoint(point *DataPoint) error
+type seriesEncoder[T any] interface {
+	encodePoint(point *DataPoint[T]) error
 	flush() error
 }
 
-func newSeriesEncoder(w io.Writer) seriesEncoder {
-	return &gorillaEncoder{
+func newSeriesEncoder[T any](w io.Writer) seriesEncoder[T] {
+	return &gorillaEncoder[T]{
 		w:   w,
 		buf: &bstream{stream: make([]byte, 0)},
 	}
@@ -46,7 +46,7 @@ func newSeriesEncoder(w io.Writer) seriesEncoder {
 
 // gorillaEncoder implements the Gorilla's time-series data compression.
 // See: http://www.vldb.org/pvldb/vol8/p1816-teller.pdf
-type gorillaEncoder struct {
+type gorillaEncoder[T any] struct {
 	// backend stream writer
 	w io.Writer
 
@@ -75,7 +75,7 @@ type gorillaEncoder struct {
 }
 
 // encodePoints is not goroutine safe. It's caller's responsibility to lock it.
-func (e *gorillaEncoder) encodePoint(point *DataPoint) error {
+func (e *gorillaEncoder[T]) encodePoint(point *DataPoint[T]) error {
 	var tDelta uint64
 
 	// Borrowed from https://github.com/prometheus/prometheus/blob/39d79c3cfb86c47d6bc06a9e9317af582f1833bb/tsdb/chunkenc/xor.go#L150
@@ -132,7 +132,7 @@ func (e *gorillaEncoder) encodePoint(point *DataPoint) error {
 
 // flush writes the buffered-bytes into the backend io.Writer
 // and resets everything used for computation.
-func (e *gorillaEncoder) flush() error {
+func (e *gorillaEncoder[T]) flush() error {
 	// TODO: Compress with ZStandard
 	_, err := e.w.Write(e.buf.bytes())
 	if err != nil {
@@ -152,7 +152,7 @@ func (e *gorillaEncoder) flush() error {
 	return nil
 }
 
-func (e *gorillaEncoder) writeVDelta(v float64) {
+func (e *gorillaEncoder[T]) writeVDelta(v float64) {
 	vDelta := math.Float64bits(v) ^ math.Float64bits(e.v)
 
 	if vDelta == 0 {
@@ -187,23 +187,23 @@ func (e *gorillaEncoder) writeVDelta(v float64) {
 	}
 }
 
-type seriesDecoder interface {
-	decodePoint(dst *DataPoint) error
+type seriesDecoder[T any] interface {
+	decodePoint(dst *DataPoint[T]) error
 }
 
 // newSeriesDecoder decompress data from the given Reader, then holds the decompressed data
-func newSeriesDecoder(r io.Reader) (seriesDecoder, error) {
+func newSeriesDecoder[T any](r io.Reader) (seriesDecoder[T], error) {
 	// TODO: Stop copying entire bytes, then make it possible to to make bstreamReader from io.Reader
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read all bytes: %w", err)
 	}
-	return &gorillaDecoder{
+	return &gorillaDecoder[T]{
 		br: newBReader(b),
 	}, nil
 }
 
-type gorillaDecoder struct {
+type gorillaDecoder[T any] struct {
 	br      bstreamReader
 	numRead uint16
 
@@ -217,7 +217,7 @@ type gorillaDecoder struct {
 	trailing uint8
 }
 
-func (d *gorillaDecoder) decodePoint(dst *DataPoint) error {
+func (d *gorillaDecoder[T]) decodePoint(dst *DataPoint[T]) error {
 	if d.numRead == 0 {
 		t, err := binary.ReadVarint(&d.br)
 		if err != nil {
@@ -317,7 +317,7 @@ func (d *gorillaDecoder) decodePoint(dst *DataPoint) error {
 	return nil
 }
 
-func (d *gorillaDecoder) readValue() error {
+func (d *gorillaDecoder[T]) readValue() error {
 	bit, err := d.br.readBitFast()
 	if err != nil {
 		bit, err = d.br.readBit()

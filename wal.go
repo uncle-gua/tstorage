@@ -18,8 +18,8 @@ const (
 )
 
 // wal represents a write-ahead log, which offers durability guarantees.
-type wal interface {
-	append(op walOperation, rows []Row) error
+type wal[T any] interface {
+	append(op walOperation, rows []Row[T]) error
 	flush() error
 	punctuate() error
 	removeOldest() error
@@ -27,32 +27,32 @@ type wal interface {
 	refresh() error
 }
 
-type nopWAL struct {
+type nopWAL[T any] struct {
 	filename string
 	f        *os.File
 	mu       sync.Mutex
 }
 
-func (f *nopWAL) append(_ walOperation, _ []Row) error {
+func (f *nopWAL[T]) append(_ walOperation, _ []Row[T]) error {
 	return nil
 }
 
-func (f *nopWAL) flush() error {
+func (f *nopWAL[T]) flush() error {
 	return nil
 }
 
-func (f *nopWAL) punctuate() error {
+func (f *nopWAL[T]) punctuate() error {
 	return nil
 }
 
-func (f *nopWAL) removeOldest() error {
+func (f *nopWAL[T]) removeOldest() error {
 	return nil
 }
 
-func (f *nopWAL) removeAll() error {
+func (f *nopWAL[T]) removeAll() error {
 	return nil
 }
 
-func (f *nopWAL) refresh() error {
+func (f *nopWAL[T]) refresh() error {
 	return nil
 }

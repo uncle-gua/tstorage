@@ -23,7 +23,7 @@ import (
   ├── 0
   └── 1
 */
-type diskWAL struct {
+type diskWAL[T any] struct {
 	dir          string
 	bufferedSize int
 	// Buffered-writer to the active segment
@@ -34,11 +34,11 @@ type diskWAL struct {
 	mu    sync.Mutex
 }
 
-func newDiskWAL(dir string, bufferedSize int) (wal, error) {
+func newDiskWAL[T any](dir string, bufferedSize int) (wal[T], error) {
 	if err := os.MkdirAll(dir, fs.ModePerm); err != nil {
 		return nil, fmt.Errorf("failed to make WAL dir: %w", err)
 	}
-	w := &diskWAL{
+	w := &diskWAL[T]{
 		dir:          dir,
 		bufferedSize: bufferedSize,
 	}
@@ -53,7 +53,7 @@ func newDiskWAL(dir string, bufferedSize int) (wal, error) {
 }
 
 // append appends the given entry to the end of a file via the file descriptor it has.
-func (w *diskWAL) append(op walOperation, rows []Row) error {
+func (w *diskWAL[T]) append(op walOperation, rows []Row[T]) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -99,7 +99,7 @@ func (w *diskWAL) append(op walOperation, rows []Row) error {
 }
 
 // flush flushes all buffered entries to the underlying file.
-func (w *diskWAL) flush() error {
+func (w *diskWAL[T]) flush() error {
 	if err := w.w.Flush(); err != nil {
 		return fmt.Errorf("failed to flush buffered-data into the underlying WAL file: %w", err)
 	}
@@ -107,7 +107,7 @@ func (w *diskWAL) flush() error {
 }
 
 // punctuate set boundary and creates a new segment.
-func (w *diskWAL) punctuate() error {
+func (w *diskWAL[T]) punctuate() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if err := w.flush(); err != nil {
@@ -126,7 +126,7 @@ func (w *diskWAL) punctuate() error {
 }
 
 // truncateOldest removes only the oldest segment.
-func (w *diskWAL) removeOldest() error {
+func (w *diskWAL[T]) removeOldest() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	files, err := os.ReadDir(w.dir)
@@ -140,7 +140,7 @@ func (w *diskWAL) removeOldest() error {
 }
 
 // removeAll removes all segment files.
-func (w *diskWAL) removeAll() error {
+func (w *diskWAL[T]) removeAll() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if err := w.fd.Close(); err != nil {
@@ -153,7 +153,7 @@ func (w *diskWAL) removeAll() error {
 }
 
 // refresh removes all segment files and make a new segment.
-func (w *diskWAL) refresh() error {
+func (w *diskWAL[T]) refresh() error {
 	if err := w.removeAll(); err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func (w *diskWAL) refresh() error {
 }
 
 // createSegmentFile creates a new file with the name of the numbering index.
-func (w *diskWAL) createSegmentFile(dir string) (*os.File, error) {
+func (w *diskWAL[T]) createSegmentFile(dir string) (*os.File, error) {
 	name := strconv.Itoa(int(atomic.LoadUint32(&w.index)))
 	f, err := os.OpenFile(filepath.Join(dir, name), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -180,32 +180,32 @@ func (w *diskWAL) createSegmentFile(dir string) (*os.File, error) {
 	return f, nil
 }
 
-type walRecord struct {
+type walRecord[T any] struct {
 	op  walOperation
-	row Row
+	row Row[T]
 }
 
-type diskWALReader struct {
+type diskWALReader[T any] struct {
 	dir          string
 	files        []os.DirEntry
-	rowsToInsert []Row
+	rowsToInsert []Row[T]
 }
 
-func newDiskWALReader(dir string) (*diskWALReader, error) {
+func newDiskWALReader[T any](dir string) (*diskWALReader[T], error) {
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read the WAL dir: %w", err)
 	}
 
-	return &diskWALReader{
+	return &diskWALReader[T]{
 		dir:          dir,
 		files:        files,
-		rowsToInsert: make([]Row, 0),
+		rowsToInsert: make([]Row[T], 0),
 	}, nil
 }
 
 // readAll reads all segment files and caches the result for each operation.
-func (f *diskWALReader) readAll() error {
+func (f *diskWALReader[T]) readAll() error {
 	for _, file := range f.files {
 		if file.IsDir() {
 			return fmt.Errorf("unexpected directory found under the WAL directory: %s", file.Name())
@@ -214,7 +214,7 @@ func (f *diskWALReader) readAll() error {
 		if err != nil {
 			return fmt.Errorf("failed to open WAL segment file: %w", err)
 		}
-		segment := &segment{
+		segment := &segment[T]{
 			file: fd,
 			r:    bufio.NewReader(fd),
 		}
@@ -242,15 +242,15 @@ func (f *diskWALReader) readAll() error {
 }
 
 // segment represents a segment file.
-type segment struct {
+type segment[T any] struct {
 	file *os.File
 	r    *bufio.Reader
 	// FIXME: Use interface to support other operation type
-	current walRecord
+	current walRecord[T]
 	err     error
 }
 
-func (f *segment) next() bool {
+func (f *segment[T]) next() bool {
 	op, err := f.r.ReadByte()
 	if errors.Is(err, io.EOF) {
 		return false
@@ -285,11 +285,11 @@ func (f *segment) next() bool {
 			f.err = fmt.Errorf("failed to read value: %w", err)
 			return false
 		}
-		f.current = walRecord{
+		f.current = walRecord[T]{
 			op: walOperation(op),
-			row: Row{
+			row: Row[T]{
 				Metric: string(metric),
-				DataPoint: DataPoint{
+				DataPoint: DataPoint[T]{
 					Timestamp: ts,
 					Value:     math.Float64frombits(val),
 				},
@@ -304,14 +304,14 @@ func (f *segment) next() bool {
 }
 
 // error gives back an error if it has been facing an error while reading.
-func (f *segment) error() error {
+func (f *segment[T]) error() error {
 	return f.err
 }
 
-func (f *segment) record() *walRecord {
+func (f *segment[T]) record() *walRecord[T] {
 	return &f.current
 }
 
-func (f *segment) close() error {
+func (f *segment[T]) close() error {
 	return f.file.Close()
 }

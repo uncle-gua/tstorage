@@ -1,6 +1,6 @@
 package tstorage
 
-type fakePartition struct {
+type fakePartition[T any] struct {
 	minT      int64
 	maxT      int64
 	numPoints int
@@ -9,34 +9,34 @@ type fakePartition struct {
 	err error
 }
 
-func (f *fakePartition) insertRows(_ []Row) ([]Row, error) {
+func (f *fakePartition[T]) insertRows(_ []Row[T]) ([]Row[T], error) {
 	return nil, f.err
 }
 
-func (f *fakePartition) selectDataPoints(_ string, _ []Label, _, _ int64) ([]*DataPoint, error) {
+func (f *fakePartition[T]) selectDataPoints(_ string, _ []Label, _, _ int64) ([]*DataPoint[T], error) {
 	return nil, f.err
 }
 
-func (f *fakePartition) minTimestamp() int64 {
+func (f *fakePartition[T]) minTimestamp() int64 {
 	return f.minT
 }
 
-func (f *fakePartition) maxTimestamp() int64 {
+func (f *fakePartition[T]) maxTimestamp() int64 {
 	return f.maxT
 }
 
-func (f *fakePartition) size() int {
+func (f *fakePartition[T]) size() int {
 	return f.numPoints
 }
 
-func (f *fakePartition) active() bool {
+func (f *fakePartition[T]) active() bool {
 	return f.IsActive
 }
 
-func (f *fakePartition) clean() error {
+func (f *fakePartition[T]) clean() error {
 	return nil
 }
 
-func (f *fakePartition) expired() bool {
+func (f *fakePartition[T]) expired() bool {
 	return false
 }

@@ -12,44 +12,44 @@ import (
 func Test_memoryPartition_InsertRows(t *testing.T) {
 	tests := []struct {
 		name               string
-		memoryPartition    *memoryPartition
-		rows               []Row
+		memoryPartition    *memoryPartition[float64]
+		rows               []Row[float64]
 		wantErr            bool
-		wantDataPoints     []*DataPoint
-		wantOutOfOrderRows []Row
+		wantDataPoints     []*DataPoint[float64]
+		wantOutOfOrderRows []Row[float64]
 	}{
 		{
 			name:            "insert in-order rows",
-			memoryPartition: newMemoryPartition(nil, 0, "").(*memoryPartition),
-			rows: []Row{
-				{Metric: "metric1", DataPoint: DataPoint{Timestamp: 1, Value: 0.1}},
-				{Metric: "metric1", DataPoint: DataPoint{Timestamp: 2, Value: 0.1}},
-				{Metric: "metric1", DataPoint: DataPoint{Timestamp: 3, Value: 0.1}},
+			memoryPartition: newMemoryPartition[float64](nil, 0, "").(*memoryPartition[float64]),
+			rows: []Row[float64]{
+				{Metric: "metric1", DataPoint: DataPoint[float64]{Timestamp: 1, Value: 0.1}},
+				{Metric: "metric1", DataPoint: DataPoint[float64]{Timestamp: 2, Value: 0.1}},
+				{Metric: "metric1", DataPoint: DataPoint[float64]{Timestamp: 3, Value: 0.1}},
 			},
-			wantDataPoints: []*DataPoint{
+			wantDataPoints: []*DataPoint[float64]{
 				{Timestamp: 1, Value: 0.1},
 				{Timestamp: 2, Value: 0.1},
 				{Timestamp: 3, Value: 0.1},
 			},
-			wantOutOfOrderRows: []Row{},
+			wantOutOfOrderRows: []Row[float64]{},
 		},
 		{
 			name: "insert out-of-order rows",
-			memoryPartition: func() *memoryPartition {
-				m := newMemoryPartition(nil, 0, "").(*memoryPartition)
-				m.insertRows([]Row{
-					{Metric: "metric1", DataPoint: DataPoint{Timestamp: 2, Value: 0.1}},
+			memoryPartition: func() *memoryPartition[float64] {
+				m := newMemoryPartition[float64](nil, 0, "").(*memoryPartition[float64])
+				m.insertRows([]Row[float64]{
+					{Metric: "metric1", DataPoint: DataPoint[float64]{Timestamp: 2, Value: 0.1}},
 				})
 				return m
 			}(),
-			rows: []Row{
-				{Metric: "metric1", DataPoint: DataPoint{Timestamp: 1, Value: 0.1}},
+			rows: []Row[float64]{
+				{Metric: "metric1", DataPoint: DataPoint[float64]{Timestamp: 1, Value: 0.1}},
 			},
-			wantDataPoints: []*DataPoint{
+			wantDataPoints: []*DataPoint[float64]{
 				{Timestamp: 2, Value: 0.1},
 			},
-			wantOutOfOrderRows: []Row{
-				{Metric: "metric1", DataPoint: DataPoint{Timestamp: 1, Value: 0.1}},
+			wantOutOfOrderRows: []Row[float64]{
+				{Metric: "metric1", DataPoint: DataPoint[float64]{Timestamp: 1, Value: 0.1}},
 			},
 		},
 	}
@@ -72,49 +72,49 @@ func Test_memoryPartition_SelectDataPoints(t *testing.T) {
 		labels          []Label
 		start           int64
 		end             int64
-		memoryPartition *memoryPartition
-		want            []*DataPoint
+		memoryPartition *memoryPartition[float64]
+		want            []*DataPoint[float64]
 	}{
 		{
 			name:            "given non-exist metric name",
 			metric:          "unknown",
 			start:           1,
 			end:             2,
-			memoryPartition: newMemoryPartition(nil, 0, "").(*memoryPartition),
-			want:            []*DataPoint{},
+			memoryPartition: newMemoryPartition[float64](nil, 0, "").(*memoryPartition[float64]),
+			want:            []*DataPoint[float64]{},
 		},
 		{
 			name:   "select some points",
 			metric: "metric1",
 			start:  2,
 			end:    4,
-			memoryPartition: func() *memoryPartition {
-				m := newMemoryPartition(nil, 0, "").(*memoryPartition)
-				m.insertRows([]Row{
+			memoryPartition: func() *memoryPartition[float64] {
+				m := newMemoryPartition[float64](nil, 0, "").(*memoryPartition[float64])
+				m.insertRows([]Row[float64]{
 					{
 						Metric:    "metric1",
-						DataPoint: DataPoint{Timestamp: 1, Value: 0.1},
+						DataPoint: DataPoint[float64]{Timestamp: 1, Value: 0.1},
 					},
 					{
 						Metric:    "metric1",
-						DataPoint: DataPoint{Timestamp: 2, Value: 0.1},
+						DataPoint: DataPoint[float64]{Timestamp: 2, Value: 0.1},
 					},
 					{
 						Metric:    "metric1",
-						DataPoint: DataPoint{Timestamp: 3, Value: 0.1},
+						DataPoint: DataPoint[float64]{Timestamp: 3, Value: 0.1},
 					},
 					{
 						Metric:    "metric1",
-						DataPoint: DataPoint{Timestamp: 4, Value: 0.1},
+						DataPoint: DataPoint[float64]{Timestamp: 4, Value: 0.1},
 					},
 					{
 						Metric:    "metric1",
-						DataPoint: DataPoint{Timestamp: 5, Value: 0.1},
+						DataPoint: DataPoint[float64]{Timestamp: 5, Value: 0.1},
 					},
 				})
 				return m
 			}(),
-			want: []*DataPoint{
+			want: []*DataPoint[float64]{
 				{Timestamp: 2, Value: 0.1},
 				{Timestamp: 3, Value: 0.1},
 			},
@@ -124,25 +124,25 @@ func Test_memoryPartition_SelectDataPoints(t *testing.T) {
 			metric: "metric1",
 			start:  1,
 			end:    4,
-			memoryPartition: func() *memoryPartition {
-				m := newMemoryPartition(nil, 0, "").(*memoryPartition)
-				m.insertRows([]Row{
+			memoryPartition: func() *memoryPartition[float64] {
+				m := newMemoryPartition[float64](nil, 0, "").(*memoryPartition[float64])
+				m.insertRows([]Row[float64]{
 					{
 						Metric:    "metric1",
-						DataPoint: DataPoint{Timestamp: 1, Value: 0.1},
+						DataPoint: DataPoint[float64]{Timestamp: 1, Value: 0.1},
 					},
 					{
 						Metric:    "metric1",
-						DataPoint: DataPoint{Timestamp: 2, Value: 0.1},
+						DataPoint: DataPoint[float64]{Timestamp: 2, Value: 0.1},
 					},
 					{
 						Metric:    "metric1",
-						DataPoint: DataPoint{Timestamp: 3, Value: 0.1},
+						DataPoint: DataPoint[float64]{Timestamp: 3, Value: 0.1},
 					},
 				})
 				return m
 			}(),
-			want: []*DataPoint{
+			want: []*DataPoint[float64]{
 				{Timestamp: 1, Value: 0.1},
 				{Timestamp: 2, Value: 0.1},
 				{Timestamp: 3, Value: 0.1},
@@ -158,19 +158,19 @@ func Test_memoryPartition_SelectDataPoints(t *testing.T) {
 }
 
 func Test_memoryMetric_EncodeAllPoints_sorted(t *testing.T) {
-	mt := memoryMetric{
-		points: []*DataPoint{
+	mt := memoryMetric[float64]{
+		points: []*DataPoint[float64]{
 			{Timestamp: 1, Value: 0.1},
 			{Timestamp: 3, Value: 0.1},
 		},
-		outOfOrderPoints: []*DataPoint{
+		outOfOrderPoints: []*DataPoint[float64]{
 			{Timestamp: 4, Value: 0.1},
 			{Timestamp: 2, Value: 0.1},
 		},
 	}
 	allTimestamps := make([]int64, 0, 4)
-	encoder := fakeEncoder{
-		encodePointFunc: func(p *DataPoint) error {
+	encoder := fakeEncoder[float64]{
+		encodePointFunc: func(p *DataPoint[float64]) error {
 			allTimestamps = append(allTimestamps, p.Timestamp)
 			return nil
 		},
@@ -181,11 +181,11 @@ func Test_memoryMetric_EncodeAllPoints_sorted(t *testing.T) {
 }
 
 func Test_memoryMetric_EncodeAllPoints_error(t *testing.T) {
-	mt := memoryMetric{
-		points: []*DataPoint{{Timestamp: 1, Value: 0.1}},
+	mt := memoryMetric[float64]{
+		points: []*DataPoint[float64]{{Timestamp: 1, Value: 0.1}},
 	}
-	encoder := fakeEncoder{
-		encodePointFunc: func(p *DataPoint) error {
+	encoder := fakeEncoder[float64]{
+		encodePointFunc: func(p *DataPoint[float64]) error {
 			return fmt.Errorf("some error")
 		},
 	}
